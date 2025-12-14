@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SubjectsScreen extends StatefulWidget {
   const SubjectsScreen({super.key});
@@ -8,7 +10,32 @@ class SubjectsScreen extends StatefulWidget {
 }
 
 class _SubjectsScreenState extends State<SubjectsScreen> {
-  final List<Map<String, String>> subjects = [];
+  List<Map<String, String>> subjects = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubjects();
+  }
+
+  // 🔹 LOAD SUBJECTS
+  Future<void> _loadSubjects() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? data = prefs.getString('subjects');
+
+    if (data != null) {
+      final List decoded = jsonDecode(data);
+      setState(() {
+        subjects = decoded.map((e) => Map<String, String>.from(e)).toList();
+      });
+    }
+  }
+
+  // 🔹 SAVE SUBJECTS
+  Future<void> _saveSubjects() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('subjects', jsonEncode(subjects));
+  }
 
   void _addSubject() {
     String courseName = '';
@@ -20,34 +47,32 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Add Subject"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: "Course Name"),
-                onChanged: (v) => courseName = v,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: "Course Code"),
-                onChanged: (v) => courseCode = v,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: "Professor"),
-                onChanged: (v) => professor = v,
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                decoration: const InputDecoration(labelText: "Type"),
-                items: const [
-                  DropdownMenuItem(value: "ETH", child: Text("ETH")),
-                  DropdownMenuItem(value: "ELA", child: Text("ELA")),
-                ],
-                onChanged: (v) => type = v!,
-              ),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(labelText: "Course Name"),
+              onChanged: (v) => courseName = v,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: "Course Code"),
+              onChanged: (v) => courseCode = v,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: "Professor"),
+              onChanged: (v) => professor = v,
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: type,
+              decoration: const InputDecoration(labelText: "Type"),
+              items: const [
+                DropdownMenuItem(value: "ETH", child: Text("ETH")),
+                DropdownMenuItem(value: "ELA", child: Text("ELA")),
+              ],
+              onChanged: (v) => type = v!,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -65,6 +90,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                     'type': type,
                   });
                 });
+                _saveSubjects(); // 🔥 SAVE HERE
                 Navigator.pop(context);
               }
             },
